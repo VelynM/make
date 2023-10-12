@@ -1,0 +1,128 @@
+#version00.00.01
+
+DEFAULT_CC              ?= gcc
+DEFAULT_LD              ?= ld
+DEFAULT_CFLAGS          ?=
+DEFAULT_LDLIBS          ?=
+
+BASE_CC                 = $(call get_project_value,base_cc,$(DEFAULT_CC))
+BASE_LD                 = $(call get_project_value,base_ld,$(DEFAULT_LD))
+BASE_CFLAGS             = $(call get_project_value,base_cflags,$(DEFAULT_CFLAGS))
+BASE_LDLIBS             = $(call get_project_value,base_ldlibs,$(DEFAULT_LDLIBS))
+
+BASE_PATH               = /Developer/Platforms/iPhoneOS.platform/Developer
+BASE_SDK                = iPhoneOS4.3.sdk
+
+ifeq ($(ARCHITECTURE),i386)
+ BASE_PATH               = /Developer/Platforms/iPhoneSimulator.platform/Developer
+ BASE_SDK                = iPhoneSimulator4.3.sdk
+endif
+ 
+BASE_USR_PATH           = $(BASE_PATH)/usr/bin
+
+BASE_CFLAGS            += -DPLATFORM_$(PLATFORM)
+BASE_RELEASE_CFLAGS    += -O2
+
+BASE_CFLAGS            += -pipe -g -std=c99 -Wall -pedantic -W \
+                          -Werror-implicit-function-declaration -Wc++-compat
+BASE_CFLAGS            += -Wstrict-prototypes -Wmissing-prototypes \
+                          -Wmissing-declarations -Wno-float-equal -Wundef \
+                          -Wendif-labels -Wshadow -Wpointer-arith \
+                          -Wbad-function-cast -Wcast-qual -Wcast-align \
+                          -Wwrite-strings -Wsign-compare -Waggregate-return \
+                          -Wmissing-noreturn -Wmissing-format-attribute \
+                          -Wredundant-decls -Wnested-externs -Winline \
+                          -Wdisabled-optimization -Wstrict-aliasing \
+                          -Wempty-body
+BASE_CFLAGS            += -Wstrict-aliasing=2 -Wstrict-overflow=5
+BASE_CFLAGS            += -Wunsafe-loop-optimizations
+#BASE_CFLAGS            += -Wconversion
+BASE_CFLAGS            += -Wfatal-errors
+
+# clang only, catch undefined behavior
+#CFLAGS += -fcatch-undefined-behavior
+
+# trap integer overflow
+#BASE_CFLAGS += -ftrapv
+
+# disable exceptions
+BASE_CFLAGS            += -fno-exceptions
+#BASE_CFLAGS            += -fno-rtti
+
+# use hidden symbol visibility
+BASE_CFLAGS            += -fvisibility=hidden
+
+# clang and llvm-gcc, i386 and x86_64, enable link-time optimizations
+#BASE_CFLAGS            += -flto
+
+# iOS SDK version
+BASE_CFLAGS            += -miphoneos-version-min=3.0 -isysroot $(BASE_PATH)/SDKs/$(BASE_SDK)
+BASE_LDLIBS            += -miphoneos-version-min=3.0 -isysroot $(BASE_PATH)/SDKs/$(BASE_SDK)
+
+# specific optimizations
+#BASE_RELEASE_CFLAGS    += -freorder-blocks
+#BASE_RELEASE_CFLAGS    += -fsched-interblock
+#BASE_RELEASE_CFLAGS    += -funsafe-loop-optimizations # GCC only
+#BASE_RELEASE_CFLAGS    += -fmerge-all-constants
+BASE_RELEASE_CFLAGS    += -ftree-vectorize
+BASE_RELEASE_CFLAGS    += -ffast-math
+#BASE_RELEASE_CFLAGS   += -fno-fast-math
+#BASE_RELEASE_CFLAGS     += -momit-leaf-frame-pointer
+#BASE_RELEASE_CFLAGS     += -fno-tree-pre
+#BASE_RELEASE_CFLAGS     += -falign-loops
+#BASE_RELEASE_CFLAGS     += -funroll-loops
+#BASE_RELEASE_CFLAGS     += -fgcse-sm
+
+# omit frame pointer
+ifneq ($(BUILDTYPE),profile)
+  BASE_RELEASE_CFLAGS     += -fomit-frame-pointer
+endif
+
+# strict aliasing
+BASE_RELEASE_CFLAGS    += -fstrict-aliasing
+
+# strict overflow
+BASE_RELEASE_CFLAGS    += -fstrict-overflow
+
+# architecture-specific settings
+ifeq ($(ARCHITECTURE),armv6)
+ BASE_CFLAGS            += -arch armv6 -march=armv6z -mcpu=arm1176jzf-s
+ BASE_RELEASE_CFLAGS    += -mdynamic-no-pic
+ BASE_LDLIBS            += -arch armv6 -march=armv6z -mcpu=arm1176jzf-s
+endif
+
+ifeq ($(ARCHITECTURE),armv7)
+ BASE_CFLAGS            += -arch armv7 -march=armv7a -mcpu=cortex-a8
+ BASE_RELEASE_CFLAGS    += -mdynamic-no-pic -mfpu=neon
+ BASE_LDLIBS            += -arch armv7 -march=armv7a -mcpu=cortex-a8
+endif
+
+ifeq ($(ARCHITECTURE),i386)
+ BASE_CFLAGS            += -arch i386
+ BASE_RELEASE_CFLAGS    +=
+ BASE_LDLIBS            += -arch i386
+endif
+
+# stack protector / mudflaps
+#BASE_CFLAGS            += -Wstack-protector -fstack-protector-all -fmudflap
+#BASE_LDLIBS            += -fmudflap -lmudflap -fstack-protector-all
+
+DEFAULT_DEBUG_CC        = $(BASE_USR_PATH)/gcc
+DEFAULT_DEBUG_LD        = $(BASE_USR_PATH)/ld
+DEFAULT_DEBUG_CFLAGS    = $(BASE_CFLAGS) -DDEBUG
+DEFAULT_DEBUG_LDLIBS    = $(BASE_LDLIBS)
+
+DEFAULT_RELEASE_CC      = $(BASE_USR_PATH)/gcc
+DEFAULT_RELEASE_LD      = $(BASE_USR_PATH)/ld
+DEFAULT_RELEASE_CFLAGS  = $(BASE_CFLAGS) $(BASE_RELEASE_CFLAGS) -DNDEBUG
+DEFAULT_RELEASE_LDLIBS  = $(BASE_LDLIBS)
+
+DEFAULT_PROFILE_CC      = $(BASE_USR_PATH)/gcc
+DEFAULT_PROFILE_LD      = $(BASE_USR_PATH)/ld
+DEFAULT_PROFILE_CFLAGS  = $(BASE_CFLAGS) $(BASE_RELEASE_CFLAGS) -DNDEBUG -DPROFILE -pg
+DEFAULT_PROFILE_LDLIBS  = $(BASE_LDLIBS) -pg
+
+DEFAULT_FINAL_CC        = $(BASE_USR_PATH)/gcc
+DEFAULT_FINAL_LD        = $(BASE_USR_PATH)/ld
+DEFAULT_FINAL_CFLAGS    = $(BASE_CFLAGS) $(BASE_RELEASE_CFLAGS) -DNDEBUG -DFINAL
+DEFAULT_FINAL_LDLIBS    = $(BASE_LDLIBS) -Wl,-dead_strip -Wl,-dead_strip_dylibs

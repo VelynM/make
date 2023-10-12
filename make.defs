@@ -1,0 +1,36 @@
+#version00.00.01
+
+platform               ?= darwin
+architecture           ?= i386
+PLATFORM                = $(platform)
+ARCHITECTURE            = $(architecture)
+
+get_project_value       = $(or \
+                               $($(PLATFORM)_$(ARCHITECTURE)_$(1)), \
+                               $($(ARCHITECTURE)_$(1)), \
+                               $($(PLATFORM)_$(1)), \
+                               $($(1)), \
+                               $(2)) \
+
+include $(BASE_DIR)/make.$(PLATFORM).defs
+
+# provide lowercase versions for convenience
+DEFAULT_debug_CC        = $(DEFAULT_DEBUG_CC)
+DEFAULT_debug_LD        = $(DEFAULT_DEBUG_LD)
+DEFAULT_debug_CFLAGS    = $(DEFAULT_DEBUG_CFLAGS)
+DEFAULT_debug_LDLIBS    = $(DEFAULT_DEBUG_LDLIBS)
+
+DEFAULT_release_CC      = $(DEFAULT_RELEASE_CC)
+DEFAULT_release_LD      = $(DEFAULT_RELEASE_LD)
+DEFAULT_release_CFLAGS  = $(DEFAULT_RELEASE_CFLAGS)
+DEFAULT_release_LDLIBS  = $(DEFAULT_RELEASE_LDLIBS)
+
+DEFAULT_profile_CC      = $(DEFAULT_PROFILE_CC)
+DEFAULT_profile_LD      = $(DEFAULT_PROFILE_LD)
+DEFAULT_profile_CFLAGS  = $(DEFAULT_PROFILE_CFLAGS)
+DEFAULT_profile_LDLIBS  = $(DEFAULT_PROFILE_LDLIBS)
+
+DEFAULT_final_CC        = $(DEFAULT_FINAL_CC)
+DEFAULT_final_LD        = $(DEFAULT_FINAL_LD)
+DEFAULT_final_CFLAGS    = $(DEFAULT_FINAL_CFLAGS)
+DEFAULT_final_LDLIBS    = $(DEFAULT_FINAL_LDLIBS)

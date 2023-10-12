@@ -1,0 +1,98 @@
+#version00.00.01
+
+BASE_DIR := $(dir $(lastword $(MAKEFILE_LIST)))
+
+buildtype      ?= debug
+BUILDTYPE       = $(buildtype)
+
+include $(BASE_DIR)/make.defs
+
+APPS            =
+TARGETS         =
+
+.PHONY: all
+all: targets
+
+# implicit link rule, made explicit
+LINK_EXECUTABLE = $(LINK.o) $^ $(LOADLIBES) $(LDLIBS) -o $@
+
+-include *.make
+
+ifdef apps
+ APPS            = $(apps)
+endif
+
+define APP_template
+
+ # build defaults
+ $(1)_$(2)_CC       ?= $(DEFAULT_$(2)_CC)
+ $(1)_$(2)_LD       ?= $(DEFAULT_$(2)_LD)
+ $(1)_$(2)_CFLAGS   ?= $(DEFAULT_$(2)_CFLAGS) $($(1)_base_CFLAGS) $($(1)_$(2)_extra_CFLAGS)
+ $(1)_$(2)_LDLIBS   ?= $(DEFAULT_$(2)_LDLIBS) $($(1)_base_LDLIBS) $($(1)_$(2)_extra_LDLIBS)
+
+ # platform/architecture/application/buildtype
+ #$(1)_PATH          = $(3)/$(4)/$(1)/$(2)
+
+ # application/buildtype/platform/architecture
+ $(1)_PATH          = $(1)/$(2)/$(3)/$(4)
+
+ $(1)_OBJECT_OUTPUT = obj/$$($(1)_PATH)
+ $(1)_TARGET_OUTPUT = bin/$$($(1)_PATH)
+
+ $(1)_TARGET        = $$($(1)_TARGET_OUTPUT)/$(1)
+
+ $$($(1)_OBJECT_OUTPUT)/%.o: %.c
+	$$(CC) -MMD -c $$(CFLAGS) $$< -o $$@
+
+ $$($(1)_OBJECT_OUTPUT)/%.o: %.cpp
+	$$(CC) -MMD -c $$(CFLAGS) $$< -o $$@
+
+ $$($(1)_OBJECT_OUTPUT)/%.o: %.m
+	$$(CC) -MMD -c $$(CFLAGS) $$< -o $$@
+
+ $$($(1)_OBJECT_OUTPUT)/%.o: %.S
+	$$(CC) -MMD -c $$(CFLAGS) $$< -o $$@
+
+ $(1)_OBJECTS1 = $(addprefix $$($(1)_OBJECT_OUTPUT)/,$($(1)_SOURCES:.c=.o))
+ $(1)_OBJECTS2 = $$($(1)_OBJECTS1:.cpp=.o)
+ $(1)_OBJECTS3 = $$($(1)_OBJECTS2:.m=.o)
+ $(1)_OBJECTS  = $$($(1)_OBJECTS3:.S=.o)
+ $(1)_DEPENDS  = $$($(1)_OBJECTS:.o=.d)
+
+ $(1)_OBJECT_DIRECTORIES = $$(sort $$(dir $$($(1)_OBJECTS)))
+ 
+ $$($(1)_OBJECTS): CC     = $$($(1)_$(2)_CC)
+ $$($(1)_OBJECTS): CFLAGS = $$($(1)_$(2)_CFLAGS)
+ $$($(1)_OBJECTS): | $$($(1)_OBJECT_DIRECTORIES)
+ 
+ $$($(1)_TARGET): LINK.o = $$($(1)_$(2)_CC)
+ $$($(1)_TARGET): LDLIBS = $$($(1)_$(2)_LDLIBS)
+ $$($(1)_TARGET): | $$($(1)_TARGET_OUTPUT)
+ 
+ $$($(1)_TARGET): $$($(1)_OBJECTS)
+	$$(LINK_EXECUTABLE)
+
+ $$($(1)_OBJECT_DIRECTORIES):
+	@mkdir -p $$($(1)_OBJECT_DIRECTORIES)
+
+ $$($(1)_TARGET_OUTPUT):
+	@mkdir -p $$($(1)_TARGET_OUTPUT)
+
+ TARGETS += $$($(1)_TARGET)
+
+ -include $$($(1)_DEPENDS)
+
+endef
+
+$(foreach app,$(APPS),$(eval $(call APP_template,$(app),$(BUILDTYPE),$(PLATFORM),$(ARCHITECTURE))))
+
+.PHONY: targets
+targets: $(TARGETS)
+
+.PHONY: clean distclean
+clean:	
+	-rm -rf obj bin *.dSYM # build x64 Debug Release
+
+distclean: clean
+	-rm -f `find . \( -not -type d \) -and \
+		\( -name '*~' -or -name '.#*' \) -type f -print`
